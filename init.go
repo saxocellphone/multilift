@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"github.com/saxocellphone/multilift/server"
+)
 
 func main() {
-	fmt.Println("This is main")
+	work := make(chan server.Request)
+	go server.GetRequests(work)
+	server.NewBalancer().Balance(work)
 }

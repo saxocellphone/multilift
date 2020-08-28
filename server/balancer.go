@@ -3,20 +3,7 @@ package server
 import (
 	"container/heap"
 	"fmt"
-	"strconv"
-	"time"
 )
-
-type Request struct {
-	currFlorr int
-	destFloor int
-}
-
-func request(work chan Request, currFloor int, destFloor int) {
-	c := make(chan int)
-	work <- Request{currFloor, destFloor}
-	<-c
-}
 
 type Pool []*Elevator
 
@@ -68,7 +55,7 @@ func NewBalancer() *Balancer {
 	return b
 }
 
-func (b *Balancer) balance(work chan Request) {
+func (b *Balancer) Balance(work chan Request) {
 	for {
 		select {
 		case req := <-work:
@@ -76,12 +63,7 @@ func (b *Balancer) balance(work chan Request) {
 		case w := <-b.done:
 			b.completed(w)
 		}
-		// b.print()
 	}
-}
-
-func (b *Balancer) print() {
-
 }
 
 func (b *Balancer) dispatch(req Request) {
@@ -97,19 +79,4 @@ func (b *Balancer) completed(w *Elevator) {
 	fmt.Printf("Elevator %d has arrived at destination. It has no further requests. \n", w.id)
 	heap.Remove(&b.pool, w.i)
 	heap.Push(&b.pool, w)
-}
-
-func getRequests(work chan Request) {
-	for {
-		input := ""
-		fmt.Scanln(&input)
-		floor, _ := strconv.Atoi(input)
-		go request(work, 0, floor) // For now, assume all requests are comming from floor 0
-	}
-}
-
-func main() {
-	work := make(chan Request)
-	go getRequests(work)
-	NewBalancer().balance(work)
 }
