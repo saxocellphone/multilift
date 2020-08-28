@@ -10,7 +10,7 @@ type Pool []*Elevator
 func (p Pool) Len() int { return len(p) }
 
 func (p Pool) Less(i, j int) bool {
-	return p[i].pending < p[j].pending
+	return len(p[i].pending) < len(p[j].pending)
 }
 
 func (p *Pool) Swap(i, j int) {
@@ -48,7 +48,7 @@ func NewBalancer() *Balancer {
 	done := make(chan *Elevator, nElevator)
 	b := &Balancer{make(Pool, 0, nElevator), done, 0}
 	for i := 0; i < nElevator; i++ {
-		w := &Elevator{id: i, requests: make(chan Request)}
+		w := &Elevator{id: i, requests: make(chan Request), operational: true}
 		heap.Push(&b.pool, w)
 		go w.operate(b.done)
 	}
@@ -69,13 +69,12 @@ func (b *Balancer) Balance(work chan Request) {
 func (b *Balancer) dispatch(req Request) {
 	w := heap.Pop(&b.pool).(*Elevator)
 	w.requests <- req
-	w.pending++
-	fmt.Printf("Elevator %d is currently on %d, and is picking up passenger from floor %d heading to floor %d. \n", w.id, w.currFloor, req.currFlorr, req.destFloor)
+	w.pending = append(w.pending, req.currFloor)
 	heap.Push(&b.pool, w)
 }
 
 func (b *Balancer) completed(w *Elevator) {
-	w.pending--
+	w.pending = w.pending[1:]
 	fmt.Printf("Elevator %d has arrived at destination. It has no further requests. \n", w.id)
 	heap.Remove(&b.pool, w.i)
 	heap.Push(&b.pool, w)
