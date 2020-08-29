@@ -20,6 +20,7 @@ func request(work chan Request, currFloor int, destFloor int) {
 }
 
 func GetRequests(work chan Request) {
+	fmt.Println("Enter a floor:")
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		input, _ := reader.ReadString('\n')
