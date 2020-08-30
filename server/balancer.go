@@ -30,13 +30,14 @@ func (b *Balancer) Balance(work chan Request) {
 		case req := <-work:
 			b.dispatch(req)
 		case w := <-b.dropoff:
-			b.completed(w)
+			b.arrived(w)
 		}
 	}
 }
 
 func (b *Balancer) dispatch(req Request) {
 	w := b.pool[0]
+	picked := false
 	reqDir := 1 // The direction of the request
 	if req.currFloor > req.destFloor {
 		reqDir = -1
@@ -47,8 +48,13 @@ func (b *Balancer) dispatch(req Request) {
 			// Or elevator that is stationary
 			continue
 		}
-		if math.Abs(float64(w.currFloor-req.currFloor)) > math.Abs(float64(elevator.currFloor-req.currFloor)) {
+		if (elevator.currFloor > req.currFloor && elevator.dir == 1) || (elevator.currFloor < req.currFloor && elevator.dir == -1) {
+			// If elevator is going up but passenger requested from below, we skip. And vice versa
+			continue
+		}
+		if !picked || math.Abs(float64(w.currFloor-req.currFloor)) > math.Abs(float64(elevator.currFloor-req.currFloor)) {
 			w = elevator
+			picked = true
 		}
 	}
 	if req.currFloor != w.currFloor {
@@ -57,13 +63,12 @@ func (b *Balancer) dispatch(req Request) {
 			w.id, w.currFloor, req.currFloor, req.destFloor)
 	} else {
 		fmt.Printf(
-			"Elevator %d is currently on %d, heading to floor %d.\n",
+			"Elevator %d picked up passenger on floor %d, heading to floor %d.\n",
 			w.id, w.currFloor, req.destFloor)
 	}
 	w.requests <- req
 }
 
-func (b *Balancer) completed(w *Elevator) {
-	w.dir = 0
-	fmt.Printf("Elevator %d has arrived at %d. \n", w.id, w.currFloor)
+func (b *Balancer) arrived(w *Elevator) {
+	fmt.Printf("Elevator %d has arrived at %d. Dir: %d \n", w.id, w.currFloor, w.dir)
 }
